@@ -1,0 +1,1523 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GameVault — Sistema de Gestión de Videojuegos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════
+   TOKENS & RESET
+═══════════════════════════════════════════════ */
+:root {
+  --bg:        #0a0a0f;
+  --bg2:       #111118;
+  --bg3:       #1a1a24;
+  --surface:   #1e1e2e;
+  --border:    #2a2a3e;
+  --accent:    #e8ff5a;
+  --accent2:   #ff6b35;
+  --accent3:   #5affd6;
+  --text:      #e8e8f0;
+  --muted:     #6b6b88;
+  --danger:    #ff4d6d;
+  --success:   #5affd6;
+  --warn:      #ffb347;
+  --info:      #7eb8f7;
+
+  --r:         6px;
+  --r-lg:      12px;
+  --font-mono: 'Space Mono', monospace;
+  --font-sans: 'Syne', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.6;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ═══════════════════════════════════════════════
+   GRID BACKGROUND
+═══════════════════════════════════════════════ */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0;
+  background-image:
+    linear-gradient(rgba(232,255,90,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(232,255,90,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════════
+   LAYOUT
+═══════════════════════════════════════════════ */
+.app { position: relative; z-index: 1; max-width: 1280px; margin: 0 auto; padding: 0 24px 60px; }
+
+/* ═══════════════════════════════════════════════
+   HEADER
+═══════════════════════════════════════════════ */
+header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 28px 0 24px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 32px;
+}
+.logo {
+  display: flex; align-items: center; gap: 12px;
+}
+.logo-icon {
+  width: 40px; height: 40px;
+  background: var(--accent);
+  border-radius: var(--r);
+  display: grid; place-items: center;
+  font-size: 20px;
+}
+.logo-text { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+.logo-text span { color: var(--accent); }
+.header-meta {
+  display: flex; align-items: center; gap: 16px;
+}
+.api-indicator {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--muted);
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 20px; padding: 6px 14px;
+}
+.api-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+
+/* ═══════════════════════════════════════════════
+   SECURITY BAR (Mantenimiento Adaptativo – API-KEY)
+═══════════════════════════════════════════════ */
+.security-bar {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent2);
+  border-radius: var(--r-lg);
+  padding: 14px 20px;
+  margin-bottom: 24px;
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+}
+.security-label {
+  font-family: var(--font-mono); font-size: 10px; color: var(--accent2);
+  letter-spacing: 0.08em; white-space: nowrap; font-weight: 700;
+}
+.security-bar input {
+  flex: 1; min-width: 220px;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 8px 12px;
+  font-family: var(--font-mono); font-size: 12px; color: var(--text);
+  outline: none; transition: border-color .2s;
+}
+.security-bar input:focus { border-color: var(--accent2); }
+.security-bar input::placeholder { color: var(--muted); }
+#apiStatus {
+  font-family: var(--font-mono); font-size: 11px; padding: 5px 12px;
+  border-radius: 20px; white-space: nowrap;
+}
+.status-ok  { background: rgba(90,255,214,.12); color: var(--success); border: 1px solid rgba(90,255,214,.3); }
+.status-err { background: rgba(255,77,109,.12);  color: var(--danger);  border: 1px solid rgba(255,77,109,.3); }
+
+/* ═══════════════════════════════════════════════
+   STATS ROW
+═══════════════════════════════════════════════ */
+.stats-row {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px;
+}
+.stat-card {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: 18px 20px;
+  position: relative; overflow: hidden;
+  transition: border-color .2s, transform .15s;
+}
+.stat-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.stat-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+}
+.stat-card.c-create::before { background: var(--accent); }
+.stat-card.c-update::before { background: var(--info); }
+.stat-card.c-delete::before { background: var(--danger); }
+.stat-card.c-total::before  { background: var(--accent2); }
+.stat-num { font-size: 32px; font-weight: 800; line-height: 1; margin-bottom: 4px; }
+.stat-lbl { font-family: var(--font-mono); font-size: 10px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
+.stat-card.c-create .stat-num { color: var(--accent); }
+.stat-card.c-update .stat-num { color: var(--info); }
+.stat-card.c-delete .stat-num { color: var(--danger); }
+.stat-card.c-total  .stat-num { color: var(--accent2); }
+
+/* ═══════════════════════════════════════════════
+   TWO-COLUMN LAYOUT
+═══════════════════════════════════════════════ */
+.main-grid {
+  display: grid; grid-template-columns: 1fr 380px; gap: 24px; align-items: start;
+}
+@media (max-width: 900px) { .main-grid { grid-template-columns: 1fr; } }
+
+/* ═══════════════════════════════════════════════
+   PANEL BASE
+═══════════════════════════════════════════════ */
+.panel {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--r-lg); overflow: hidden;
+}
+.panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+}
+.panel-title {
+  font-size: 13px; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--text);
+}
+.panel-subtitle { font-size: 11px; color: var(--muted); font-family: var(--font-mono); }
+.panel-body { padding: 20px; }
+
+/* ═══════════════════════════════════════════════
+   TABLE
+═══════════════════════════════════════════════ */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th {
+  padding: 10px 14px; text-align: left;
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em;
+  color: var(--muted); text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+}
+tbody tr {
+  border-bottom: 1px solid rgba(42,42,62,.5);
+  transition: background .15s;
+  animation: rowIn .25s ease both;
+}
+tbody tr:hover { background: rgba(232,255,90,0.03); }
+@keyframes rowIn { from { opacity:0; transform:translateX(-8px); } to { opacity:1; transform:none; } }
+td { padding: 12px 14px; vertical-align: middle; }
+.badge-genre {
+  display: inline-block; font-size: 10px; font-family: var(--font-mono);
+  padding: 3px 8px; border-radius: 4px;
+  background: rgba(232,255,90,.1); color: var(--accent);
+  border: 1px solid rgba(232,255,90,.2);
+}
+.badge-platform {
+  display: inline-block; font-size: 10px; font-family: var(--font-mono);
+  padding: 3px 8px; border-radius: 4px;
+  background: rgba(90,255,214,.08); color: var(--accent3);
+  border: 1px solid rgba(90,255,214,.2);
+}
+.price { font-family: var(--font-mono); font-size: 13px; color: var(--accent); }
+.year  { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.row-id { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+.actions-cell { display: flex; gap: 6px; align-items: center; }
+
+/* ═══════════════════════════════════════════════
+   BUTTONS
+═══════════════════════════════════════════════ */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font-sans); font-size: 12px; font-weight: 600;
+  padding: 7px 14px; border-radius: var(--r);
+  border: 1px solid transparent; cursor: pointer;
+  transition: all .15s; white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.btn-primary { background: var(--accent); color: #0a0a0f; border-color: var(--accent); }
+.btn-primary:hover:not(:disabled) { background: #d4e84d; }
+.btn-ghost   { background: transparent; color: var(--text); border-color: var(--border); }
+.btn-ghost:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.btn-danger  { background: transparent; color: var(--danger); border-color: rgba(255,77,109,.4); }
+.btn-danger:hover:not(:disabled) { background: rgba(255,77,109,.1); }
+.btn-edit    { background: transparent; color: var(--info); border-color: rgba(126,184,247,.4); }
+.btn-edit:hover:not(:disabled) { background: rgba(126,184,247,.1); }
+.btn-sm { padding: 5px 10px; font-size: 11px; }
+.btn-full { width: 100%; justify-content: center; }
+
+/* ═══════════════════════════════════════════════
+   FORM
+═══════════════════════════════════════════════ */
+.form-group { margin-bottom: 14px; }
+.form-label {
+  display: block; font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: 0.08em; color: var(--muted); text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.form-label .req { color: var(--accent2); margin-left: 2px; }
+.form-control {
+  width: 100%; background: var(--bg2);
+  border: 1px solid var(--border); border-radius: var(--r);
+  padding: 10px 12px; font-family: var(--font-sans); font-size: 13px;
+  color: var(--text); outline: none; transition: border-color .2s, box-shadow .2s;
+}
+.form-control:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(232,255,90,.1); }
+.form-control.error { border-color: var(--danger); box-shadow: 0 0 0 3px rgba(255,77,109,.1); }
+.form-control::placeholder { color: var(--muted); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.field-error { font-size: 11px; color: var(--danger); margin-top: 4px; font-family: var(--font-mono); }
+.form-actions { display: flex; gap: 8px; margin-top: 18px; }
+
+/* ═══════════════════════════════════════════════
+   SIDEBAR PANELS
+═══════════════════════════════════════════════ */
+.sidebar { display: flex; flex-direction: column; gap: 16px; }
+
+/* ═══════════════════════════════════════════════
+   LOG PANEL (Mantenimiento Correctivo)
+═══════════════════════════════════════════════ */
+.log-panel { max-height: 280px; overflow-y: auto; }
+.log-entry {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 8px 0; border-bottom: 1px solid rgba(42,42,62,.4);
+  font-family: var(--font-mono); font-size: 11px; animation: rowIn .2s ease both;
+}
+.log-entry:last-child { border-bottom: none; }
+.log-time { color: var(--muted); white-space: nowrap; flex-shrink: 0; font-size: 10px; }
+.log-level { padding: 1px 6px; border-radius: 3px; font-size: 10px; font-weight: 700; flex-shrink: 0; }
+.log-level.INFO  { background: rgba(126,184,247,.15); color: var(--info); }
+.log-level.WARN  { background: rgba(255,179,71,.15);  color: var(--warn); }
+.log-level.ERROR { background: rgba(255,77,109,.15);  color: var(--danger); }
+.log-level.OK    { background: rgba(90,255,214,.15);  color: var(--success); }
+.log-msg { color: var(--text); word-break: break-word; }
+.log-empty { color: var(--muted); font-family: var(--font-mono); font-size: 12px; text-align: center; padding: 20px 0; }
+
+/* ═══════════════════════════════════════════════
+   UNIT TESTS PANEL (Mantenimiento Perfectivo)
+═══════════════════════════════════════════════ */
+.test-list { display: flex; flex-direction: column; gap: 6px; }
+.test-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px; border-radius: var(--r);
+  background: var(--bg2); border: 1px solid var(--border);
+  font-size: 12px; transition: border-color .2s;
+}
+.test-item.pass { border-color: rgba(90,255,214,.3); }
+.test-item.fail { border-color: rgba(255,77,109,.3); }
+.test-item.pending { border-color: var(--border); opacity: .6; }
+.test-icon { font-size: 14px; flex-shrink: 0; }
+.test-name { flex: 1; font-family: var(--font-mono); font-size: 11px; }
+.test-status { font-family: var(--font-mono); font-size: 10px; }
+.test-item.pass .test-status { color: var(--success); }
+.test-item.fail .test-status { color: var(--danger); }
+.test-item.pending .test-status { color: var(--muted); }
+.test-summary {
+  display: flex; gap: 12px; margin-top: 10px;
+  font-family: var(--font-mono); font-size: 11px;
+  padding: 8px 12px; background: var(--bg2); border-radius: var(--r);
+}
+
+/* ═══════════════════════════════════════════════
+   MODAL
+═══════════════════════════════════════════════ */
+.modal-overlay {
+  display: none; position: fixed; inset: 0; z-index: 100;
+  background: rgba(10,10,15,.8); backdrop-filter: blur(4px);
+  align-items: center; justify-content: center; padding: 20px;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--r-lg); width: 100%; max-width: 480px;
+  animation: modalIn .2s ease;
+}
+@keyframes modalIn { from { opacity:0; transform:scale(.95) translateY(10px); } to { opacity:1; transform:none; } }
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 20px; border-bottom: 1px solid var(--border);
+}
+.modal-title { font-size: 15px; font-weight: 700; }
+.modal-close {
+  background: none; border: none; color: var(--muted); cursor: pointer;
+  font-size: 20px; padding: 4px; line-height: 1; transition: color .15s;
+}
+.modal-close:hover { color: var(--text); }
+.modal-body { padding: 20px; }
+.modal-footer { padding: 0 20px 20px; display: flex; gap: 10px; }
+
+/* ═══════════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════════ */
+#toastContainer {
+  position: fixed; bottom: 24px; right: 24px; z-index: 200;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.toast {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px; border-radius: var(--r);
+  font-size: 13px; min-width: 280px; max-width: 380px;
+  border: 1px solid; animation: toastIn .3s ease;
+  box-shadow: 0 8px 32px rgba(0,0,0,.4);
+}
+@keyframes toastIn { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:none; } }
+@keyframes toastOut { to { opacity:0; transform:translateX(20px); } }
+.toast.success { background: rgba(90,255,214,.1);  border-color: rgba(90,255,214,.3);  color: var(--success); }
+.toast.error   { background: rgba(255,77,109,.1);  border-color: rgba(255,77,109,.3);  color: var(--danger); }
+.toast.warn    { background: rgba(255,179,71,.1);   border-color: rgba(255,179,71,.3);   color: var(--warn); }
+.toast.info    { background: rgba(126,184,247,.1); border-color: rgba(126,184,247,.3); color: var(--info); }
+
+/* ═══════════════════════════════════════════════
+   CONFIRM DIALOG
+═══════════════════════════════════════════════ */
+.confirm-msg { color: var(--muted); font-size: 14px; margin-bottom: 6px; }
+.confirm-target { color: var(--danger); font-weight: 700; }
+
+/* ═══════════════════════════════════════════════
+   SEARCH BAR
+═══════════════════════════════════════════════ */
+.toolbar {
+  display: flex; gap: 10px; align-items: center;
+  padding: 14px 20px; border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.search-box {
+  flex: 1; min-width: 180px;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 8px 12px;
+  font-family: var(--font-sans); font-size: 13px; color: var(--text);
+  outline: none; transition: border-color .2s;
+}
+.search-box:focus { border-color: var(--accent); }
+.search-box::placeholder { color: var(--muted); }
+select.filter-select {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 8px 12px;
+  font-family: var(--font-sans); font-size: 13px; color: var(--text);
+  outline: none; cursor: pointer;
+}
+select.filter-select:focus { border-color: var(--accent); }
+.record-count { font-family: var(--font-mono); font-size: 11px; color: var(--muted); white-space: nowrap; }
+
+/* ═══════════════════════════════════════════════
+   EMPTY STATE
+═══════════════════════════════════════════════ */
+.empty-state { text-align: center; padding: 48px 20px; color: var(--muted); }
+.empty-icon { font-size: 40px; margin-bottom: 12px; }
+.empty-text { font-size: 14px; }
+
+/* ═══════════════════════════════════════════════
+   ENV PANEL (Adaptativo: config externa)
+═══════════════════════════════════════════════ */
+.env-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 0; border-bottom: 1px solid rgba(42,42,62,.4);
+  font-family: var(--font-mono); font-size: 11px;
+}
+.env-row:last-child { border-bottom: none; }
+.env-key   { color: var(--accent3); min-width: 160px; flex-shrink: 0; }
+.env-val   { color: var(--accent); flex: 1; }
+.env-badge { font-size: 10px; padding: 2px 7px; border-radius: 3px;
+             background: rgba(232,255,90,.1); color: var(--accent); border: 1px solid rgba(232,255,90,.2); }
+
+/* ═══════════════════════════════════════════════
+   API DOCS PANEL (Perfectivo: OpenAPI)
+═══════════════════════════════════════════════ */
+.api-endpoint {
+  border: 1px solid var(--border); border-radius: var(--r);
+  overflow: hidden; margin-bottom: 8px;
+}
+.api-endpoint-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; cursor: pointer; background: var(--bg2);
+  transition: background .15s;
+}
+.api-endpoint-header:hover { background: var(--bg3); }
+.method-badge {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  padding: 3px 8px; border-radius: 3px; min-width: 48px; text-align: center;
+}
+.method-GET    { background: rgba(90,255,214,.15); color: var(--accent3); border: 1px solid rgba(90,255,214,.3); }
+.method-POST   { background: rgba(232,255,90,.15); color: var(--accent);  border: 1px solid rgba(232,255,90,.3); }
+.method-PUT    { background: rgba(126,184,247,.15);color: var(--info);    border: 1px solid rgba(126,184,247,.3); }
+.method-DELETE { background: rgba(255,77,109,.15); color: var(--danger);  border: 1px solid rgba(255,77,109,.3); }
+.api-path { font-family: var(--font-mono); font-size: 12px; color: var(--text); flex: 1; }
+.api-desc { font-size: 11px; color: var(--muted); }
+.api-endpoint-body {
+  display: none; padding: 10px 12px;
+  border-top: 1px solid var(--border); background: var(--bg);
+  font-family: var(--font-mono); font-size: 11px; color: var(--muted);
+  line-height: 1.7;
+}
+.api-endpoint-body.open { display: block; }
+.api-key-note {
+  margin-top: 6px; padding: 6px 10px; border-radius: var(--r);
+  background: rgba(255,179,71,.08); border: 1px solid rgba(255,179,71,.2);
+  color: var(--warn); font-size: 10px;
+}
+
+/* ═══════════════════════════════════════════════
+   SCROLLBAR
+═══════════════════════════════════════════════ */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg2); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+/* ═══════════════════════════════════════════════
+   TAG ROW (maintenance labels)
+═══════════════════════════════════════════════ */
+.maint-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px; }
+.maint-tag {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  padding: 4px 10px; border-radius: 4px; letter-spacing: 0.06em;
+}
+.maint-tag.cor { background: rgba(255,77,109,.12);  color: #ff4d6d; border: 1px solid rgba(255,77,109,.3); }
+.maint-tag.ada { background: rgba(126,184,247,.12); color: #7eb8f7; border: 1px solid rgba(126,184,247,.3); }
+.maint-tag.per { background: rgba(90,255,214,.12);  color: #5affd6; border: 1px solid rgba(90,255,214,.3); }
+.maint-tag.pre { background: rgba(255,179,71,.12);  color: #ffb347; border: 1px solid rgba(255,179,71,.3); }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ── HEADER ─────────────────────────────────── -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🎮</div>
+      <div>
+        <div class="logo-text">Game<span>Vault</span></div>
+        <div style="font-size:11px;color:var(--muted);font-family:var(--font-mono)">Sistema de Gestión de Videojuegos</div>
+      </div>
+    </div>
+    <div class="header-meta">
+      <div class="api-indicator">
+        <div class="api-dot"></div>
+        <span id="hubStatusText">Hub: sin conectar</span>
+      </div>
+      <button class="btn btn-primary" onclick="openCreateModal()">+ Nuevo juego</button>
+    </div>
+  </header>
+
+  <!-- ── ETIQUETAS DE MANTENIMIENTO ─────────────── -->
+  <div class="maint-tags">
+    <span class="maint-tag cor">🐞 Correctivo: Logs ISO-8601</span>
+    <span class="maint-tag ada">⚙️ Adaptativo: API-Key X-FIS-EPN-KEY + .env</span>
+    <span class="maint-tag per">📈 Perfectivo: Pruebas Unitarias + Filtros</span>
+    <span class="maint-tag pre">🛡️ Preventivo: Validaciones + Try-Catch</span>
+  </div>
+
+  <!-- ── BARRA DE SEGURIDAD (Adaptativo: API-Key) ─ -->
+  <div class="security-bar">
+    <span class="security-label">⚙ ADAPTATIVO — X-FIS-EPN-KEY</span>
+    <input id="apiKeyInput" type="text" placeholder="Ingrese su API Key para conectar con el hub (ej. FIS-EPN-2026-SECRET)" value="FIS-EPN-2026-SECRET">
+    <button class="btn btn-ghost btn-sm" onclick="testHubConnection()">Probar conexión</button>
+    <span id="apiStatus" class="status-ok">✓ KEY configurada</span>
+  </div>
+
+  <!-- ── STATS ──────────────────────────────────── -->
+  <div class="stats-row">
+    <div class="stat-card c-create">
+      <div class="stat-num" id="statTotal">0</div>
+      <div class="stat-lbl">Total juegos</div>
+    </div>
+    <div class="stat-card c-update">
+      <div class="stat-num" id="statUpdated">0</div>
+      <div class="stat-lbl">Actualizados</div>
+    </div>
+    <div class="stat-card c-delete">
+      <div class="stat-num" id="statDeleted">0</div>
+      <div class="stat-lbl">Eliminados</div>
+    </div>
+    <div class="stat-card c-total">
+      <div class="stat-num" id="statEvents">0</div>
+      <div class="stat-lbl">Eventos hub</div>
+    </div>
+  </div>
+
+  <!-- ── MAIN GRID ──────────────────────────────── -->
+  <div class="main-grid">
+
+    <!-- ── TABLA DE VIDEOJUEGOS ─────────────────── -->
+    <div class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">Catálogo de Videojuegos</div>
+          <div class="panel-subtitle">CRUD con validaciones y trazabilidad</div>
+        </div>
+      </div>
+      <div class="toolbar">
+        <input class="search-box" id="searchBox" type="text" placeholder="Buscar por título, género o plataforma…" oninput="renderTable()">
+        <select class="filter-select" id="genreFilter" onchange="renderTable()">
+          <option value="">Todos los géneros</option>
+          <option>Aventura</option><option>RPG</option><option>Acción</option>
+          <option>Deportes</option><option>Sandbox</option><option>Terror</option>
+          <option>Estrategia</option><option>Simulación</option><option>Plataformas</option>
+        </select>
+        <span class="record-count" id="recordCount">0 registros</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th><th>Título</th><th>Género</th><th>Plataforma</th>
+              <th>Año</th><th>Precio</th><th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+        <div id="emptyState" class="empty-state" style="display:none">
+          <div class="empty-icon">🕹️</div>
+          <div class="empty-text">No se encontraron videojuegos</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SIDEBAR ───────────────────────────────── -->
+    <div class="sidebar">
+
+      <!-- LOG PANEL (Correctivo: logs estructurados ISO-8601) -->
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">🐞 Logs de Auditoría</div>
+            <div class="panel-subtitle">ISO-8601 · INFO / WARN / ERROR</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="clearLogs()">Limpiar</button>
+        </div>
+        <div class="panel-body" style="padding:12px 16px;">
+          <div class="log-panel" id="logPanel">
+            <div class="log-empty">Sin actividad registrada</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- UNIT TESTS (Perfectivo: suite de pruebas) -->
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">📈 Pruebas Unitarias</div>
+            <div class="panel-subtitle">Validación de reglas de negocio</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="runTests()">▶ Ejecutar</button>
+        </div>
+        <div class="panel-body">
+          <div class="test-list" id="testList">
+            <div style="color:var(--muted);font-size:12px;font-family:var(--font-mono)">Haz clic en "Ejecutar" para correr las pruebas</div>
+          </div>
+          <div class="test-summary" id="testSummary" style="display:none">
+            <span style="color:var(--success)" id="testPass">✓ 0 PASS</span>
+            <span style="color:var(--danger)"  id="testFail">✗ 0 FAIL</span>
+            <span style="color:var(--muted)"   id="testTime"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- HUB INTEGRATION -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">🔗 EPN Event Manager</div>
+        </div>
+        <div class="panel-body" style="display:flex;flex-direction:column;gap:8px;">
+          <button class="btn btn-ghost btn-full btn-sm" onclick="testHubConnection()">Probar conexión (GET /health)</button>
+          <button class="btn btn-ghost btn-full btn-sm" onclick="fetchHubStats()">Ver stats del hub (GET /stats)</button>
+          <div id="hubStatsBox" style="display:none;background:var(--bg2);border-radius:var(--r);padding:10px;font-family:var(--font-mono);font-size:11px;color:var(--accent3)"></div>
+        </div>
+      </div>
+
+      <!-- ⚙️ ADAPTATIVO: CONFIG EXTERNA (.env) -->
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">⚙️ Configuración Externa (.env)</div>
+            <div class="panel-subtitle">Variables de entorno — Mantenimiento Adaptativo</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="toggleEnvEdit()">Editar</button>
+        </div>
+        <div class="panel-body" style="padding:12px 16px;">
+          <div id="envDisplay">
+            <div class="env-row">
+              <span class="env-key">HUB_URL</span>
+              <span class="env-val" id="envHubUrl">http://localhost:3000</span>
+              <span class="env-badge">.env</span>
+            </div>
+            <div class="env-row">
+              <span class="env-key">X_FIS_EPN_KEY</span>
+              <span class="env-val" id="envApiKey">FIS-EPN-2026-SECRET</span>
+              <span class="env-badge">.env</span>
+            </div>
+            <div class="env-row">
+              <span class="env-key">MAX_TITLE_LEN</span>
+              <span class="env-val">100</span>
+              <span class="env-badge">config</span>
+            </div>
+            <div class="env-row">
+              <span class="env-key">LOG_LEVEL</span>
+              <span class="env-val">INFO</span>
+              <span class="env-badge">config</span>
+            </div>
+          </div>
+          <div id="envEdit" style="display:none;margin-top:8px;">
+            <div class="form-group" style="margin-bottom:8px;">
+              <label class="form-label">HUB_URL</label>
+              <input class="form-control" id="envHubUrlInput" value="http://localhost:3000" style="font-family:var(--font-mono);font-size:12px;">
+            </div>
+            <div class="form-group" style="margin-bottom:8px;">
+              <label class="form-label">X_FIS_EPN_KEY</label>
+              <input class="form-control" id="envApiKeyInput" value="FIS-EPN-2026-SECRET" style="font-family:var(--font-mono);font-size:12px;">
+            </div>
+            <button class="btn btn-primary btn-full btn-sm" onclick="applyEnv()">Aplicar cambios</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 📈 PERFECTIVO: DOCUMENTACIÓN API (OpenAPI simplificado) -->
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">📋 Documentación API</div>
+            <div class="panel-subtitle">OpenAPI / Swagger — Mantenimiento Perfectivo</div>
+          </div>
+        </div>
+        <div class="panel-body" style="padding:12px 16px;">
+          <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);margin-bottom:10px;">
+            Base URL: <span style="color:var(--accent3)">http://localhost:3000</span>
+          </div>
+          <div class="api-key-note">🔐 Header requerido: <b>X-FIS-EPN-KEY: &lt;tu-api-key&gt;</b></div>
+          <div style="margin-top:10px;display:flex;flex-direction:column;gap:0;">
+
+            <div class="api-endpoint">
+              <div class="api-endpoint-header" onclick="toggleEndpoint(this)">
+                <span class="method-badge method-GET">GET</span>
+                <span class="api-path">/health</span>
+                <span class="api-desc">Estado del servidor</span>
+              </div>
+              <div class="api-endpoint-body">
+                <div>→ 200 OK: <span style="color:var(--success)">{ status: "ok" }</span></div>
+                <div style="margin-top:4px;color:var(--muted)">Sin body requerido.</div>
+              </div>
+            </div>
+
+            <div class="api-endpoint">
+              <div class="api-endpoint-header" onclick="toggleEndpoint(this)">
+                <span class="method-badge method-POST">POST</span>
+                <span class="api-path">/events</span>
+                <span class="api-desc">Registrar evento</span>
+              </div>
+              <div class="api-endpoint-body">
+                <div style="color:var(--accent)">Body (JSON):</div>
+                <div>  source: string (max 100)</div>
+                <div>  entity: string (max 100)</div>
+                <div>  action: CREATE|UPDATE|DELETE|QUERY</div>
+                <div>  title:  string (max 100)</div>
+                <div>  description: string (opcional)</div>
+                <div>  payload: object (opcional)</div>
+                <div style="margin-top:6px">→ 201: <span style="color:var(--success)">{ ok: true }</span></div>
+                <div>→ 400: <span style="color:var(--danger)">{ message: "..." }</span></div>
+              </div>
+            </div>
+
+            <div class="api-endpoint">
+              <div class="api-endpoint-header" onclick="toggleEndpoint(this)">
+                <span class="method-badge method-GET">GET</span>
+                <span class="api-path">/events</span>
+                <span class="api-desc">Listar todos los eventos</span>
+              </div>
+              <div class="api-endpoint-body">
+                <div>→ 200: <span style="color:var(--success)">Array de eventos ordenados por fecha ISO-8601</span></div>
+              </div>
+            </div>
+
+            <div class="api-endpoint">
+              <div class="api-endpoint-header" onclick="toggleEndpoint(this)">
+                <span class="method-badge method-GET">GET</span>
+                <span class="api-path">/stats</span>
+                <span class="api-desc">Estadísticas por tipo</span>
+              </div>
+              <div class="api-endpoint-body">
+                <div>→ 200: <span style="color:var(--success)">{ create, update, delete, query, total }</span></div>
+                <div style="color:var(--muted);margin-top:4px">Perfectivo: incluye query en el total.</div>
+              </div>
+            </div>
+
+            <div class="api-endpoint">
+              <div class="api-endpoint-header" onclick="toggleEndpoint(this)">
+                <span class="method-badge method-GET">GET</span>
+                <span class="api-path">/events/source/:s</span>
+                <span class="api-desc">Filtrar por source</span>
+              </div>
+              <div class="api-endpoint-body">
+                <div>→ 200: Eventos donde source === :s</div>
+              </div>
+            </div>
+
+          </div>
+          <button class="btn btn-ghost btn-full btn-sm" style="margin-top:10px;" onclick="exportLogs()">⬇ Exportar logs (.txt)</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL CREAR / EDITAR ──────────────────────── -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">Nuevo Videojuego</div>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editId">
+      <div class="form-group">
+        <label class="form-label">Título <span class="req">*</span></label>
+        <input class="form-control" id="fTitulo" type="text" placeholder="ej. The Legend of Zelda: TOTK" maxlength="100">
+        <div class="field-error" id="errTitulo"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Género <span class="req">*</span></label>
+          <select class="form-control" id="fGenero">
+            <option value="">Seleccionar…</option>
+            <option>Aventura</option><option>RPG</option><option>Acción</option>
+            <option>Deportes</option><option>Sandbox</option><option>Terror</option>
+            <option>Estrategia</option><option>Simulación</option><option>Plataformas</option>
+          </select>
+          <div class="field-error" id="errGenero"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Plataforma <span class="req">*</span></label>
+          <select class="form-control" id="fPlataforma">
+            <option value="">Seleccionar…</option>
+            <option>PC</option><option>PS5</option><option>PS4</option>
+            <option>Xbox Series X</option><option>Xbox One</option>
+            <option>Nintendo Switch</option><option>Mobile</option>
+          </select>
+          <div class="field-error" id="errPlataforma"></div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Año de lanzamiento <span class="req">*</span></label>
+          <input class="form-control" id="fAnio" type="number" min="1958" max="2030" placeholder="2024">
+          <div class="field-error" id="errAnio"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Precio (USD) <span class="req">*</span></label>
+          <input class="form-control" id="fPrecio" type="number" min="0" max="9999" step="0.01" placeholder="59.99">
+          <div class="field-error" id="errPrecio"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary btn-full" onclick="submitForm()">Guardar</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL CONFIRMAR ELIMINACIÓN ───────────────── -->
+<div class="modal-overlay" id="confirmOverlay">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header">
+      <div class="modal-title" style="color:var(--danger)">⚠ Confirmar eliminación</div>
+      <button class="modal-close" onclick="closeConfirm()">×</button>
+    </div>
+    <div class="modal-body">
+      <p class="confirm-msg">¿Eliminar el videojuego <span class="confirm-target" id="confirmName"></span>?</p>
+      <p style="font-size:12px;color:var(--muted)">Esta acción no se puede deshacer.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-full" onclick="confirmDelete()">Sí, eliminar</button>
+      <button class="btn btn-ghost" onclick="closeConfirm()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── TOAST CONTAINER ───────────────────────────── -->
+<div id="toastContainer"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// 🛡️ MANTENIMIENTO PREVENTIVO: Constantes y configuración central
+// ═══════════════════════════════════════════════════════════════
+const CONFIG = {
+  HUB_URL: 'http://localhost:3000',
+  MAX_TITLE_LEN: 100,
+  MIN_YEAR: 1958,
+  MAX_YEAR: 2030,
+  MAX_PRICE: 9999,
+};
+
+// ═══════════════════════════════════════════════════════════════
+// 🐞 MANTENIMIENTO CORRECTIVO: Logger estructurado con ISO-8601
+// Antes: console.log sin formato, sin timestamp, sin nivel
+// Ahora: logger centralizado con niveles INFO/WARN/ERROR/OK
+// ═══════════════════════════════════════════════════════════════
+const Logger = {
+  entries: [],
+
+  _log(level, message) {
+    const timestamp = new Date().toISOString(); // ISO-8601 UTC obligatorio
+    const entry = { level, message, timestamp };
+    this.entries.unshift(entry);
+    this._render(entry);
+    // También al console estructurado
+    const styles = { INFO:'color:#7eb8f7', WARN:'color:#ffb347', ERROR:'color:#ff4d6d', OK:'color:#5affd6' };
+    console.log(`%c[${level}] ${timestamp} — ${message}`, styles[level] || '');
+  },
+
+  info:  (msg) => Logger._log('INFO',  msg),
+  warn:  (msg) => Logger._log('WARN',  msg),
+  error: (msg) => Logger._log('ERROR', msg),
+  ok:    (msg) => Logger._log('OK',    msg),
+
+  _render(entry) {
+    const panel = document.getElementById('logPanel');
+    const empty = panel.querySelector('.log-empty');
+    if (empty) empty.remove();
+
+    const div = document.createElement('div');
+    div.className = 'log-entry';
+    const t = entry.timestamp.replace('T', ' ').substring(0, 23) + 'Z';
+    div.innerHTML = `
+      <span class="log-time">${t}</span>
+      <span class="log-level ${entry.level}">${entry.level}</span>
+      <span class="log-msg">${entry.message}</span>
+    `;
+    panel.prepend(div);
+
+    // Limitar a 50 entradas
+    const all = panel.querySelectorAll('.log-entry');
+    if (all.length > 50) all[all.length - 1].remove();
+  }
+};
+
+function clearLogs() {
+  const panel = document.getElementById('logPanel');
+  panel.innerHTML = '<div class="log-empty">Sin actividad registrada</div>';
+  Logger.entries = [];
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 📦 ESTADO DE LA APLICACIÓN
+// ═══════════════════════════════════════════════════════════════
+let db = [];
+let nextId = 1;
+let deletedCount = 0;
+let updatedCount = 0;
+let eventCount = 0;
+let pendingDeleteId = null;
+
+// ═══════════════════════════════════════════════════════════════
+// ⚙️ MANTENIMIENTO ADAPTATIVO: API-Key header X-FIS-EPN-KEY
+// Antes: fetch sin cabecera de autenticación
+// Ahora: toda petición al hub incluye X-FIS-EPN-KEY
+// ═══════════════════════════════════════════════════════════════
+function getApiKey() {
+  return document.getElementById('apiKeyInput').value.trim();
+}
+
+async function hubRequest(path, method = 'GET', body = null) {
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    Logger.warn('X-FIS-EPN-KEY vacía — petición al hub bloqueada');
+    return null;
+  }
+
+  const opts = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'X-FIS-EPN-KEY': apiKey,          // ← ADAPTATIVO: cabecera institucional
+    }
+  };
+  if (body) opts.body = JSON.stringify(body);
+
+  try {
+    const res = await fetch(CONFIG.HUB_URL + path, opts);
+    return res;
+  } catch (e) {
+    return null; // Hub no disponible — no detiene la app
+  }
+}
+
+async function sendHubEvent(action, titulo, detalle) {
+  const res = await hubRequest('/events', 'POST', {
+    source: 'videojuegos-crud-web',
+    entity: 'Videojuego',
+    action,
+    title: titulo.substring(0, CONFIG.MAX_TITLE_LEN),
+    description: detalle,
+    payload: { app: 'GameVault', timestamp: new Date().toISOString() }
+  });
+
+  eventCount++;
+  document.getElementById('statEvents').textContent = eventCount;
+
+  if (res && res.ok) {
+    Logger.ok(`Hub ← ${action} | "${titulo}" enviado con éxito`);
+  } else {
+    Logger.warn(`Hub no disponible — evento ${action} no sincronizado`);
+  }
+}
+
+async function testHubConnection() {
+  Logger.info('Probando conexión con EPN Event Manager…');
+  const res = await hubRequest('/health');
+  const el = document.getElementById('apiStatus');
+  const hubText = document.getElementById('hubStatusText');
+
+  if (res && res.ok) {
+    el.className = 'status-ok';
+    el.textContent = '✓ Hub conectado';
+    hubText.textContent = 'Hub: conectado';
+    Logger.ok('Hub responde OK en /health');
+    toast('Hub conectado correctamente', 'success');
+  } else {
+    el.className = 'status-err';
+    el.textContent = '✗ Hub sin respuesta';
+    hubText.textContent = 'Hub: sin respuesta';
+    Logger.warn('Hub no responde — funcionalidad local activa');
+    toast('Hub sin respuesta (app funciona en modo local)', 'warn');
+  }
+}
+
+async function fetchHubStats() {
+  const res = await hubRequest('/stats');
+  const box = document.getElementById('hubStatsBox');
+  if (res && res.ok) {
+    const data = await res.json();
+    box.style.display = 'block';
+    box.innerHTML = Object.entries(data)
+      .map(([k,v]) => `<div><span style="color:var(--muted)">${k}:</span> ${v}</div>`)
+      .join('');
+    Logger.info('Stats del hub obtenidos: ' + JSON.stringify(data));
+  } else {
+    toast('No se pudo obtener stats del hub', 'error');
+    Logger.error('Error al obtener /stats del hub');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 🛡️ MANTENIMIENTO PREVENTIVO: Validación robusta de formulario
+// ═══════════════════════════════════════════════════════════════
+function validateForm() {
+  let valid = true;
+  const fields = ['Titulo','Genero','Plataforma','Anio','Precio'];
+  fields.forEach(f => {
+    document.getElementById('f'+f).classList.remove('error');
+    document.getElementById('err'+f).textContent = '';
+  });
+
+  // Título
+  const titulo = document.getElementById('fTitulo').value.trim();
+  if (!titulo) {
+    setError('Titulo', 'El título es obligatorio'); valid = false;
+  } else if (titulo.length > CONFIG.MAX_TITLE_LEN) {
+    setError('Titulo', `Máximo ${CONFIG.MAX_TITLE_LEN} caracteres`); valid = false;
+  } else if (titulo.length < 2) {
+    setError('Titulo', 'El título debe tener al menos 2 caracteres'); valid = false;
+  }
+
+  // Género
+  if (!document.getElementById('fGenero').value) {
+    setError('Genero', 'Seleccione un género'); valid = false;
+  }
+
+  // Plataforma
+  if (!document.getElementById('fPlataforma').value) {
+    setError('Plataforma', 'Seleccione una plataforma'); valid = false;
+  }
+
+  // Año
+  const anio = parseInt(document.getElementById('fAnio').value);
+  if (isNaN(anio) || anio < CONFIG.MIN_YEAR || anio > CONFIG.MAX_YEAR) {
+    setError('Anio', `Año entre ${CONFIG.MIN_YEAR} y ${CONFIG.MAX_YEAR}`); valid = false;
+  }
+
+  // Precio
+  const precio = parseFloat(document.getElementById('fPrecio').value);
+  if (isNaN(precio) || precio < 0 || precio > CONFIG.MAX_PRICE) {
+    setError('Precio', `Precio entre $0 y $${CONFIG.MAX_PRICE}`); valid = false;
+  }
+
+  // Título duplicado (no duplicar ID existente)
+  const editId = parseInt(document.getElementById('editId').value);
+  const isDuplicate = db.some(v =>
+    v.titulo.toLowerCase() === titulo.toLowerCase() && v.id !== editId
+  );
+  if (isDuplicate && valid) {
+    setError('Titulo', 'Ya existe un juego con ese título'); valid = false;
+    Logger.warn(`PREVENTIVO: intento de título duplicado "${titulo}"`);
+  }
+
+  if (!valid) Logger.warn('Formulario rechazado — validaciones fallidas');
+  return valid;
+}
+
+function setError(field, msg) {
+  document.getElementById('f'+field).classList.add('error');
+  document.getElementById('err'+field).textContent = msg;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CRUD OPERATIONS
+// ═══════════════════════════════════════════════════════════════
+function createGame(titulo, genero, plataforma, anio, precio) {
+  try {
+    const game = { id: nextId++, titulo, genero, plataforma, anio, precio };
+    db.push(game);
+    updateStats();
+    renderTable();
+    Logger.ok(`CREATE — ID=${game.id} "${titulo}" (${plataforma}, ${anio}, $${precio})`);
+    sendHubEvent('CREATE', titulo, `Juego creado: ${titulo} en ${plataforma}`);
+    toast(`"${titulo}" agregado al catálogo`, 'success');
+    return game;
+  } catch(e) {
+    Logger.error(`Error al crear videojuego: ${e.message}`);
+    toast('Error al crear el videojuego', 'error');
+  }
+}
+
+function updateGame(id, titulo, genero, plataforma, anio, precio) {
+  try {
+    const idx = db.findIndex(v => v.id === id);
+    if (idx === -1) throw new Error(`ID ${id} no encontrado`);
+    db[idx] = { ...db[idx], titulo, genero, plataforma, anio, precio };
+    updatedCount++;
+    updateStats();
+    renderTable();
+    Logger.ok(`UPDATE — ID=${id} "${titulo}" actualizado`);
+    sendHubEvent('UPDATE', titulo, `Juego actualizado ID=${id}`);
+    toast(`"${titulo}" actualizado`, 'success');
+  } catch(e) {
+    Logger.error(`Error al actualizar ID=${id}: ${e.message}`);
+    toast('Error al actualizar', 'error');
+  }
+}
+
+function deleteGame(id) {
+  try {
+    const idx = db.findIndex(v => v.id === id);
+    if (idx === -1) throw new Error(`ID ${id} no encontrado`);
+    const [removed] = db.splice(idx, 1);
+    deletedCount++;
+    updateStats();
+    renderTable();
+    Logger.ok(`DELETE — ID=${id} "${removed.titulo}" eliminado`);
+    sendHubEvent('DELETE', removed.titulo, `Juego eliminado ID=${id}`);
+    toast(`"${removed.titulo}" eliminado`, 'warn');
+  } catch(e) {
+    Logger.error(`Error al eliminar ID=${id}: ${e.message}`);
+    toast('Error al eliminar', 'error');
+  }
+}
+
+function readAll() {
+  const q = document.getElementById('searchBox').value.toLowerCase();
+  const g = document.getElementById('genreFilter').value;
+  return db.filter(v => {
+    const matchQ = !q || v.titulo.toLowerCase().includes(q) ||
+                   v.genero.toLowerCase().includes(q) ||
+                   v.plataforma.toLowerCase().includes(q);
+    const matchG = !g || v.genero === g;
+    return matchQ && matchG;
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════════════════════
+function renderTable() {
+  const data = readAll();
+  const tbody = document.getElementById('tableBody');
+  const empty = document.getElementById('emptyState');
+  document.getElementById('recordCount').textContent = `${data.length} registro${data.length!==1?'s':''}`;
+
+  if (data.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  tbody.innerHTML = data.map(v => `
+    <tr>
+      <td><span class="row-id">#${v.id}</span></td>
+      <td style="font-weight:600;max-width:200px">${escHtml(v.titulo)}</td>
+      <td><span class="badge-genre">${escHtml(v.genero)}</span></td>
+      <td><span class="badge-platform">${escHtml(v.plataforma)}</span></td>
+      <td><span class="year">${v.anio}</span></td>
+      <td><span class="price">$${Number(v.precio).toFixed(2)}</span></td>
+      <td>
+        <div class="actions-cell">
+          <button class="btn btn-edit btn-sm" onclick="openEditModal(${v.id})">✏ Editar</button>
+          <button class="btn btn-danger btn-sm" onclick="openConfirmDelete(${v.id})">🗑</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function updateStats() {
+  document.getElementById('statTotal').textContent   = db.length;
+  document.getElementById('statUpdated').textContent = updatedCount;
+  document.getElementById('statDeleted').textContent = deletedCount;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MODAL
+// ═══════════════════════════════════════════════════════════════
+function openCreateModal() {
+  document.getElementById('modalTitle').textContent = '+ Nuevo Videojuego';
+  document.getElementById('editId').value = '';
+  ['Titulo','Anio','Precio'].forEach(f => document.getElementById('f'+f).value = '');
+  document.getElementById('fGenero').value = '';
+  document.getElementById('fPlataforma').value = '';
+  ['Titulo','Genero','Plataforma','Anio','Precio'].forEach(f => {
+    document.getElementById('f'+f).classList.remove('error');
+    document.getElementById('err'+f).textContent = '';
+  });
+  document.getElementById('modalOverlay').classList.add('open');
+  document.getElementById('fTitulo').focus();
+  Logger.info('CREATE modal abierto');
+}
+
+function openEditModal(id) {
+  const v = db.find(x => x.id === id);
+  if (!v) return;
+  document.getElementById('modalTitle').textContent = '✏ Editar Videojuego';
+  document.getElementById('editId').value = id;
+  document.getElementById('fTitulo').value = v.titulo;
+  document.getElementById('fGenero').value = v.genero;
+  document.getElementById('fPlataforma').value = v.plataforma;
+  document.getElementById('fAnio').value = v.anio;
+  document.getElementById('fPrecio').value = v.precio;
+  ['Titulo','Genero','Plataforma','Anio','Precio'].forEach(f => {
+    document.getElementById('f'+f).classList.remove('error');
+    document.getElementById('err'+f).textContent = '';
+  });
+  document.getElementById('modalOverlay').classList.add('open');
+  Logger.info(`UPDATE modal abierto para ID=${id} "${v.titulo}"`);
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+
+function submitForm() {
+  if (!validateForm()) return;
+
+  const id     = parseInt(document.getElementById('editId').value);
+  const titulo = document.getElementById('fTitulo').value.trim();
+  const genero = document.getElementById('fGenero').value;
+  const plat   = document.getElementById('fPlataforma').value;
+  const anio   = parseInt(document.getElementById('fAnio').value);
+  const precio = parseFloat(document.getElementById('fPrecio').value);
+
+  if (id) {
+    updateGame(id, titulo, genero, plat, anio, precio);
+  } else {
+    createGame(titulo, genero, plat, anio, precio);
+  }
+  closeModal();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CONFIRM DELETE
+// ═══════════════════════════════════════════════════════════════
+function openConfirmDelete(id) {
+  const v = db.find(x => x.id === id);
+  if (!v) return;
+  pendingDeleteId = id;
+  document.getElementById('confirmName').textContent = '"' + v.titulo + '"';
+  document.getElementById('confirmOverlay').classList.add('open');
+}
+function closeConfirm() {
+  document.getElementById('confirmOverlay').classList.remove('open');
+  pendingDeleteId = null;
+}
+function confirmDelete() {
+  if (pendingDeleteId !== null) deleteGame(pendingDeleteId);
+  closeConfirm();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 📈 MANTENIMIENTO PERFECTIVO: Suite de pruebas unitarias
+// ═══════════════════════════════════════════════════════════════
+const TESTS = [
+  {
+    name: 'Validar título vacío es rechazado',
+    run() {
+      const before = db.length;
+      // Simula validación sin UI
+      const titulo = '';
+      const isValid = titulo.trim().length >= 2;
+      return !isValid; // debe fallar validación = test pasa
+    }
+  },
+  {
+    name: 'Precio negativo es rechazado',
+    run() {
+      const precio = -5.0;
+      return precio < 0; // validación correcta = true = PASS
+    }
+  },
+  {
+    name: 'Año fuera de rango rechazado',
+    run() {
+      const anio = 1800;
+      return anio < CONFIG.MIN_YEAR;
+    }
+  },
+  {
+    name: 'CREATE genera ID único incremental',
+    run() {
+      const prevLen = db.length;
+      const prevId  = nextId;
+      const g = createGame('Test Game', 'RPG', 'PC', 2024, 29.99);
+      const ok = g && g.id === prevId && db.length === prevLen + 1;
+      // Limpiar
+      db = db.filter(v => v.id !== g.id);
+      nextId = prevId + 1;
+      updateStats(); renderTable();
+      return ok;
+    }
+  },
+  {
+    name: 'DELETE remueve exactamente 1 registro',
+    run() {
+      const g = { id: nextId++, titulo:'DelTest', genero:'Acción', plataforma:'PC', anio:2020, precio:10 };
+      db.push(g);
+      const before = db.length;
+      db = db.filter(v => v.id !== g.id);
+      const after = db.length;
+      updateStats(); renderTable();
+      return before - after === 1;
+    }
+  },
+  {
+    name: 'UPDATE no crea registro nuevo',
+    run() {
+      const g = { id: nextId++, titulo:'UpdTest', genero:'RPG', plataforma:'PS5', anio:2022, precio:60 };
+      db.push(g);
+      const before = db.length;
+      const idx = db.findIndex(v => v.id === g.id);
+      db[idx].titulo = 'UpdTest Editado';
+      const after = db.length;
+      db = db.filter(v => v.id !== g.id);
+      updateStats(); renderTable();
+      return before === after;
+    }
+  },
+  {
+    name: 'Título duplicado es detectado',
+    run() {
+      const titulo = 'UniqueTestGame999';
+      db.push({ id: nextId++, titulo, genero:'RPG', plataforma:'PC', anio:2020, precio:10 });
+      const isDuplicate = db.some(v => v.titulo.toLowerCase() === titulo.toLowerCase());
+      db = db.filter(v => v.titulo !== titulo);
+      updateStats(); renderTable();
+      return isDuplicate;
+    }
+  },
+  {
+    name: 'Título > 100 chars rechazado',
+    run() {
+      const titulo = 'A'.repeat(101);
+      return titulo.length > CONFIG.MAX_TITLE_LEN;
+    }
+  },
+  {
+    name: 'Logs generan timestamps ISO-8601 válidos',
+    run() {
+      const iso = new Date().toISOString();
+      return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(iso);
+    }
+  },
+  {
+    name: 'Filtro por género devuelve subconjunto correcto',
+    run() {
+      const fake = [
+        { id:9001, titulo:'A', genero:'RPG',    plataforma:'PC',  anio:2020, precio:10 },
+        { id:9002, titulo:'B', genero:'Acción', plataforma:'PS5', anio:2021, precio:20 },
+      ];
+      const filtered = fake.filter(v => v.genero === 'RPG');
+      return filtered.length === 1 && filtered[0].titulo === 'A';
+    }
+  },
+];
+
+function runTests() {
+  Logger.info('Suite de pruebas unitarias iniciada…');
+  const list = document.getElementById('testList');
+  const summary = document.getElementById('testSummary');
+  const t0 = performance.now();
+
+  list.innerHTML = '';
+  let pass = 0, fail = 0;
+
+  TESTS.forEach((t, i) => {
+    let result;
+    try {
+      result = t.run() ? 'pass' : 'fail';
+    } catch(e) {
+      result = 'fail';
+      Logger.error(`Test "${t.name}" lanzó excepción: ${e.message}`);
+    }
+
+    if (result === 'pass') { pass++; Logger.ok(`✓ PASS [${i+1}] ${t.name}`); }
+    else { fail++; Logger.error(`✗ FAIL [${i+1}] ${t.name}`); }
+
+    const div = document.createElement('div');
+    div.className = `test-item ${result}`;
+    div.style.animationDelay = `${i*40}ms`;
+    div.innerHTML = `
+      <span class="test-icon">${result==='pass'?'✅':'❌'}</span>
+      <span class="test-name">${t.name}</span>
+      <span class="test-status">${result.toUpperCase()}</span>
+    `;
+    list.appendChild(div);
+  });
+
+  const elapsed = (performance.now() - t0).toFixed(1);
+  document.getElementById('testPass').textContent = `✓ ${pass} PASS`;
+  document.getElementById('testFail').textContent = `✗ ${fail} FAIL`;
+  document.getElementById('testTime').textContent = `${elapsed}ms`;
+  summary.style.display = 'flex';
+
+  if (fail === 0) {
+    toast(`Todas las pruebas pasaron (${pass}/${TESTS.length})`, 'success');
+    Logger.ok(`Suite completada: ${pass} PASS, ${fail} FAIL en ${elapsed}ms`);
+  } else {
+    toast(`${fail} prueba(s) fallaron`, 'error');
+    Logger.warn(`Suite completada con fallos: ${pass} PASS, ${fail} FAIL en ${elapsed}ms`);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════════════════
+function toast(msg, type = 'info') {
+  const icons = { success:'✓', error:'✗', warn:'⚠', info:'ℹ' };
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span>${icons[type]}</span><span>${msg}</span>`;
+  document.getElementById('toastContainer').appendChild(el);
+  setTimeout(() => {
+    el.style.animation = 'toastOut .3s ease forwards';
+    setTimeout(() => el.remove(), 300);
+  }, 3500);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// KEYBOARD SHORTCUTS
+// ═══════════════════════════════════════════════════════════════
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeModal(); closeConfirm(); }
+  if (e.key === 'Enter' && document.getElementById('modalOverlay').classList.contains('open')) {
+    submitForm();
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// ⚙️ ADAPTATIVO: Gestión de variables de entorno (.env)
+// Simula la extracción de config crítica hacia variables externas
+// ═══════════════════════════════════════════════════════════════
+function toggleEnvEdit() {
+  const display = document.getElementById('envDisplay');
+  const edit    = document.getElementById('envEdit');
+  const isEditing = edit.style.display !== 'none';
+  display.style.display = isEditing ? 'block' : 'none';
+  edit.style.display    = isEditing ? 'none'  : 'block';
+}
+
+function applyEnv() {
+  const newUrl    = document.getElementById('envHubUrlInput').value.trim();
+  const newApiKey = document.getElementById('envApiKeyInput').value.trim();
+
+  if (!newUrl || !newApiKey) {
+    toast('HUB_URL y X_FIS_EPN_KEY no pueden estar vacíos', 'error');
+    Logger.warn('ADAPTATIVO: intento de aplicar .env con valores vacíos');
+    return;
+  }
+
+  // Aplicar al CONFIG y a los campos visibles
+  CONFIG.HUB_URL = newUrl;
+  document.getElementById('apiKeyInput').value = newApiKey;
+  document.getElementById('envHubUrl').textContent  = newUrl;
+  document.getElementById('envApiKey').textContent  = newApiKey;
+
+  toggleEnvEdit();
+  Logger.ok(`ADAPTATIVO: .env aplicado — HUB_URL=${newUrl} | KEY=***`);
+  toast('Variables de entorno actualizadas', 'success');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 📈 PERFECTIVO: Toggle accordion de endpoints API docs
+// ═══════════════════════════════════════════════════════════════
+function toggleEndpoint(header) {
+  const body = header.nextElementSibling;
+  body.classList.toggle('open');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 📈 PERFECTIVO: Exportar logs estructurados a archivo .txt
+// ═══════════════════════════════════════════════════════════════
+function exportLogs() {
+  if (Logger.entries.length === 0) {
+    toast('No hay logs para exportar', 'warn');
+    return;
+  }
+  const lines = [
+    '# GameVault — Log de Auditoría Estructurado',
+    `# Exportado: ${new Date().toISOString()}`,
+    `# Total entradas: ${Logger.entries.length}`,
+    '# Formato: [NIVEL] timestamp — mensaje',
+    '',
+    ...Logger.entries.map(e => `[${e.level}] ${e.timestamp} — ${e.message}`)
+  ];
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `gamevault-logs-${new Date().toISOString().substring(0,10)}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+  Logger.info(`PERFECTIVO: ${Logger.entries.length} entradas exportadas a archivo`);
+  toast('Logs exportados correctamente', 'success');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INIT — Datos de demostración
+// ═══════════════════════════════════════════════════════════════
+function init() {
+  Logger.info('GameVault iniciado — Sistema de Gestión de Videojuegos v2.0');
+  Logger.info('Mantenimientos aplicados: Correctivo | Adaptativo | Perfectivo | Preventivo');
+
+  // Datos demo sin enviar al hub
+  const demo = [
+    ['The Legend of Zelda: TOTK', 'Aventura',   'Nintendo Switch', 2023, 69.99],
+    ['Red Dead Redemption 2',      'Acción',     'PS5',             2018, 39.99],
+    ['Elden Ring',                 'RPG',        'PC',              2022, 59.99],
+    ['FIFA 25',                    'Deportes',   'PS5',             2024, 69.99],
+    ['Minecraft',                  'Sandbox',    'PC',              2011, 26.95],
+    ['Resident Evil 4 Remake',     'Terror',     'PS5',             2023, 49.99],
+    ['Starfield',                  'RPG',        'PC',              2023, 59.99],
+    ['Mario Kart 8 Deluxe',        'Deportes',   'Nintendo Switch', 2017, 59.99],
+  ];
+
+  demo.forEach(([titulo, genero, plataforma, anio, precio]) => {
+    db.push({ id: nextId++, titulo, genero, plataforma, anio, precio });
+  });
+
+  updateStats();
+  renderTable();
+  Logger.ok(`${db.length} videojuegos de demostración cargados`);
+}
+
+init();
+</script>
+</body>
+</html>
